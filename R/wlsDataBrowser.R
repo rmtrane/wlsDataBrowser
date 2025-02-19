@@ -1,3 +1,4 @@
+#' @export
 wlsDataBrowser <- function() {
   old_shiny.maxRequestSize <- getOption("shiny.maxRequestSize")
 
