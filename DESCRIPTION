@@ -1,9 +1,9 @@
 Package: wlsDataBrowser
-Title: What the Package Does (One Line, Title Case)
+Title: WLS Data Browser
 Version: 0.0.0.9000
 Authors@R: 
-    person("First", "Last", , "first.last@example.com", role = c("aut", "cre"))
-Description: What the package does (one paragraph).
+    person("Ralph", "Møller Trane", role = c("aut", "cre"), email = "rmtrane@gmail.com")
+Description: The Wisconsin Longitudinal Study (https://wls.wisc.edu) is an ongoing longitudinal study first started in 1957. As such, a large number of variables have been collected. This R-package contains a small Shiny application which allows you to browse the variables available in the WLS data. Note: data not included, but freely available from the WLS website.
 License: MIT + file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)

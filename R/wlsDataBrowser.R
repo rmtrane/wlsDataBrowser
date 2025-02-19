@@ -3,8 +3,9 @@ wlsDataBrowser <- function() {
 
   options(shiny.maxRequestSize = 1100 * 1024^2)
 
-  wls_data_path_option <- "wlsDataPath0"
-
+  ###########################
+  ## UI
+  ###########################
   ui <- miniUI::miniPage(
     theme = bslib::bs_theme(version = 4),
     ## Change how selected rows are highlighted. (This "hack" works in conjunction with DT::selectRows which removes selections when not used.)
@@ -14,7 +15,8 @@ wlsDataBrowser <- function() {
     ),
     miniUI::gadgetTitleBar("WLS Data Browser"),
     miniUI::miniContentPanel(
-      if (is.null(getOption(wls_data_path_option))) {
+      ## If data path not provided through options, allow user to select file
+      if (is.null(getOption("wlsDataBrowser.data_path"))) {
         shiny::fileInput(
           "wls_data_path",
           label = "Choose input file",
@@ -30,40 +32,52 @@ wlsDataBrowser <- function() {
     )
   )
 
+  ###########################
+  ## Server
+  ###########################
   server <- function(input, output, session) {
-    wls_data_path <- shiny::reactiveVal(getOption(wls_data_path_option))
-    wls_data_tabl <- shiny::reactiveVal(getOption(wls_data_path_option))
+    ## Reactive values
+    wls_data_path <- shiny::reactiveVal(getOption("wlsDataBrowser.data_path"))
+    # wls_data_tabl <- shiny::reactiveVal(getOption("wlsDataBrowser.data_path"))
+    freq_table <- shiny::reactiveVal()
 
+    ## When input$wls_data_path changes, update reactiveVal
     shiny::observe(
       wls_data_path(input$wls_data_path$datapath)
     ) |>
       shiny::bindEvent(input$wls_data_path)
 
-    shiny::observe({
+    ## When wls_data_path() is ready, read metadata, i.e. no rows!
+    wls_data_tabl <- shiny::reactive({
       if (!is.null(wls_data_path())) {
         wls_data <- haven::read_dta(file = wls_data_path(), n_max = 0)
 
+        ## Create table with variable names and labels
         out <- data.frame(
           var_name = colnames(wls_data),
           labels = unname(unlist(lapply(wls_data, \(x) attr(x, "label")))),
           stringsAsFactors = F
         )
 
+        ## Create visit (Round) column
         out$visit <- factor(
           unlist(lapply(strsplit(out$labels, " - "), `[[`, 1)),
           levels = c("SD", "AD", paste0("R0", 1:8))
         )
 
+        ## Remove visit (Round) from labels
         out$labels <- gsub(
           pattern = paste(levels(out$visit), collapse = " - |"),
           replacement = "",
           x = out$labels
         )
 
-        wls_data_tabl(out)
+        ## Update reactiveVal with created table
+        out
       }
     })
 
+    ## datatable to show
     output$wlsData <- DT::renderDataTable({
       if (!is.null(wls_data_tabl())) {
         DT::datatable(
@@ -80,34 +94,37 @@ wlsDataBrowser <- function() {
             pageLength = 20,
             lengthMenu = c(10, 20, 50, 100, 200)
           ),
-          selection = "single" # if (input$value_tables) "single" else "none"
+          selection = "single"
         )
       }
     })
 
+    ## Create proxy data table
     wlsDataProxy <- DT::dataTableProxy("wlsData")
 
-    freq_table <- shiny::reactiveVal()
-
+    ## When a row is selected and input$value_tables is checked, create frequency table
+    ## for variable in row selected.
     shiny::observe({
       if (!is.null(input$wlsData_rows_selected)) {
         if (input$value_tables) {
           shinycssloaders::showPageSpinner()
           cur_col <- wls_data_tabl()$var_name[input$wlsData_rows_selected]
 
-          freq_table(table_values(cur_col))
+          freq_table(table_values(cur_col, file = wls_data_path()))
           shinycssloaders::hidePageSpinner()
         }
       }
     }) |>
       shiny::bindEvent(input$wlsData_rows_selected)
 
+    ## Frequencey table for output
     output$freq_table <- reactable::renderReactable({
       if (inherits(freq_table(), "reactable")) {
         freq_table()
       }
     })
 
+    ## Create UI for the popup modal
     output$for_modal <- shiny::renderUI({
       if (inherits(freq_table(), "reactable")) {
         reactable::reactableOutput("freq_table")
@@ -116,6 +133,7 @@ wlsDataBrowser <- function() {
       }
     })
 
+    ## Show modal, or remove selection
     shiny::observe({
       if (input$value_tables) {
         shiny::showModal(
@@ -134,21 +152,25 @@ wlsDataBrowser <- function() {
     }) |>
       shiny::bindEvent(input$wlsData_rows_selected)
 
+    ## When return button is clicked in popup modal, remove modal and unselect row.
     shiny::observe({
       DT::selectRows(proxy = wlsDataProxy, selected = NULL)
       shiny::removeModal()
     }) |>
       shiny::bindEvent(input$return)
 
+
+    ## When user clicks "Done", reset maxRequestSize
     shiny::observe({
       shiny::stopApp()
-      options(old_shiny.maxRequestSize = NULL)
+      options(shiny.maxRequestSize = old_shiny.maxRequestSize)
     }) |>
       shiny::bindEvent(input$done)
 
+    ## If window is closed, reset maxRequestSize
     session$onSessionEnded(function() {
       shiny::stopApp()
-      options(old_shiny.maxRequestSize = NULL)
+      options(shiny.maxRequestSize = old_shiny.maxRequestSize)
     })
   }
 
