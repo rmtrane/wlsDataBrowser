@@ -41,4 +41,5 @@ options(wlsDataBrowser.data_path = "/path/to/wls/data.dta")
 ## RStudio add-in
 
 Once installed, you should be able to find the `wlsDataBrowser` in the
-RStudio add-in dropdown menu.
+RStudio add-in dropdown menu. You might have to restart RStudio for the
+add-in to show up.
