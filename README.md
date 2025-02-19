@@ -18,8 +18,7 @@ portal](https://wls.portal.ssc.wisc.edu).
 You can install the development version of wlsDataBrowser like so:
 
 ``` r
-pak::pak("rmtrane/wlsDataBrowser")
-# alternatively: remotes::install_github("rmtrane/wlsDataBrowser")
+remotes::install_github("rmtrane/wlsDataBrowser")
 ```
 
 ## Run App
