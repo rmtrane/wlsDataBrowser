@@ -1,3 +1,8 @@
+#' Frequency Table using reactable
+#'
+#' @param cur_col string; name of column to create frequency table from
+#' @param file string; path to file
+#'
 table_values <- function(
     cur_col = "selsibtype",
     file = getOption("wlsDataPath")) {
@@ -26,7 +31,6 @@ table_values <- function(
   }
 
   for_out <- within(for_out, {
-    # within(for_out, {
     n[is.na(n)] <- 0
     valid <- values >= 0
     percent <- n / sum(n)
@@ -34,9 +38,8 @@ table_values <- function(
   })
 
   reactable::reactable(
+    # Use intersect since not all columns are always present.
     for_out[, intersect(c("values", "label", "valid", "n", "percent", "percent_valid"), colnames(for_out))],
-    # outlined = T,
-    # highlight = T,
     columns = list(
       values = reactable::colDef(
         name = "Value",
@@ -64,7 +67,6 @@ table_values <- function(
       ),
       n = reactable::colDef(
         name = "Frequency",
-        # align = "left",
         width = 12 * nchar("Frequency"),
         format = reactable::colFormat(separators = T)
       ),
@@ -84,14 +86,22 @@ table_values <- function(
         format = reactable::colFormat(percent = T, digits = 1),
         width = 12 * nchar("percent of valid")
       )
-    )[colnames(for_out)],
+    )[colnames(for_out)], # Only keep colDefs for columns in for_out
     showPageSizeOptions = T,
     defaultPageSize = 25,
     pageSizeOptions = c(10, 25, 50)
   )
 }
 
-
+#' Create bars for percentages
+#'
+#' @param width scalar; width of bar as proportion of cell
+#' @param fill string; hex color to use for bar
+#' @param height string; height of bar
+#' @param align string; one of "left" or "right" to indicate alignment of bar
+#' @param backgroundPosition string; adjust position of bar
+#' @param color string; color to use for text
+#'
 bar_style <- function(
     width = 1,
     fill = "#D9D9D9",
@@ -100,7 +110,7 @@ bar_style <- function(
     backgroundPosition = "0.25em 0.375em",
     color = "black") {
   align <- match.arg(align)
-  # vAlign <- match.arg(vAlign)
+
   if (align == "left") {
     position <- paste0(width * 100, "%")
     image <- sprintf("linear-gradient(90deg, %1$s %2$s, transparent %2$s)", fill, position)
@@ -112,17 +122,7 @@ bar_style <- function(
     backgroundImage = image,
     backgroundSize = paste("100%", height),
     backgroundRepeat = "no-repeat",
-    # backgroundPosition = vAlign,
     backgroundPosition = backgroundPosition,
     color = color
   )
-}
-
-
-shinyInput <- function(FUN, len, id, ...) {
-  inputs <- character(len)
-  for (i in seq_len(len)) {
-    inputs[i] <- as.character(FUN(paste0(id, i), ...))
-  }
-  inputs
 }

@@ -14,43 +14,44 @@ wlsDataBrowser <- function() {
   ui <- # miniUI::miniPage(
     bslib::page_fluid(
       shiny::tags$span(shiny::icon("tag"), style = "display: none;"), # necessary to display icons in datatable
-      theme = bslib::bs_theme(version = 5),
-      ## Change how selected rows are highlighted. (This "hack" works in conjunction with DT::selectCells which removes selections when not used.)
-      shiny::tags$head(
-        shiny::tags$style(
-          # shiny::HTML("table.dataTable tr.active td, table.dataTable td.active {box-shadow: inset 0 0 0 9999px #e7e7e7 !important;}"),
-          # shiny::HTML("td {color: black !important;}"),
-          shiny::HTML("
-            :root {
-              --title-box-shadow:;
-              --title-box-shadow-color-rgb: 29, 31, 33;
-            }
-            .custom-title {
-              display: flex;
-              align-items: center;
-              font-size: 24px;
-              font-weight: bold;
-              color:rgb(83, 90, 97);
-              text-align: center;
-              margin-top: 1rem;
-              margin-bottom: 1rem;
-              background-color: #f0f0f0; /* Grey background */
-              border-radius: 8px; /* Rounded corners */
-              padding: 10px; /* Padding for better appearance */
-              box-shadow: var(--title-box-shadow, 0px 0px 2px 0px RGBA(var(--title-box-shadow-color-rgb), 0.14), 0px 2px 4px 0px RGBA(var(--title-box-shadow-color-rgb), 0.16));
-            }")
-        )
-      ),
+      theme = bslib::bs_theme(
+        version = 5,
+        "table-hover-bg" = "rgb(223, 223, 223)"
+      ) |>
+        bslib::bs_add_rules("
+          /* CSS */
+
+          /* Background color when hovering last column of wlsData */
+          #wlsData tbody td:last-child:hover {
+            --bs-table-hover-bg: rgb(141, 204, 252) !important;
+          }
+
+          /* Style title */
+          .custom-title {
+            display: flex;
+            align-items: center;
+            font-size: 24px;
+            font-weight: bold;
+            color:rgb(83, 90, 97);
+            text-align: center;
+            margin-top: 1rem;
+            margin-bottom: 1rem;
+            background-color: #f0f0f0; /* Grey background */
+            border-radius: 8px; /* Rounded corners */
+            padding: 10px; /* Padding for better appearance */
+          }"),
       ## Actual UI
-      # miniUI::gadgetTitleBar("WLS Data Browser"),
       title = "WLS Data Browser",
-      # shiny::tags$div(
-      #   class = "custom-title",
+      ##
       bslib::layout_columns(
-        shiny::actionButton(inputId = "done", label = "Done"),
         "WLS Data Browser",
-        col_widths = c(2, 8, -2),
-        class = "custom-title"
+        shiny::actionButton(
+          inputId = "done",
+          label = "Done"
+        ),
+        col_widths = c(-2, 8, 2),
+        class = "custom-title",
+        height = "9vh"
         # )
       ),
       bslib::card(
@@ -63,7 +64,7 @@ wlsDataBrowser <- function() {
           )
         },
         DT::dataTableOutput("wlsData"),
-        height = "90vh"
+        height = "85vh"
       )
     )
 
@@ -110,13 +111,6 @@ wlsDataBrowser <- function() {
           x = out$labels
         )
 
-        # ## Add column with buttons to show values tables
-        out$values <- as.character(bslib::tooltip(
-          trigger = shiny::icon("table-list"),
-          # "Trigger",
-          "Click for table of values..."
-        ))
-
         ## Return created table
         out
       }
@@ -126,30 +120,56 @@ wlsDataBrowser <- function() {
     output$wlsData <- DT::renderDataTable({
       if (!is.null(wls_data_tabl())) {
         DT::datatable(
-          wls_data_tabl()[, c("var_name", "visit", "labels", "values")],
+          ## Add extra column to hold table icons, and function
+          ## as triggers for displaying frequency tables
+          cbind(
+            wls_data_tabl()[, c("var_name", "visit", "labels")],
+            "extra" = rep(
+              ## Icon to show
+              as.character(shiny::icon("table-list")),
+              nrow(wls_data_tabl())
+            )
+          ),
           colnames = c(
             "Variable name (as in data file)" = "var_name",
             "Round" = "visit",
             "Variable Label (from data file)" = "labels",
-            " " = "values"
+            " " = "extra"
           ),
           rownames = F,
           filter = "top",
           class = "row-border compact hover",
           options = list(
-            pageLength = 20,
+            pageLength = 10,
             lengthMenu = c(10, 20, 50, 100, 200),
             columnDefs = list(
+              list(targets = 0, width = "250px"),
+              list(targets = 1, width = "50px"),
               list(
                 targets = 3,
                 searchable = F,
                 orderable = F,
-                width = "20px"
+                width = "20px",
+                render = DT::JS(
+                  "function(data, type, row, meta) {",
+                  "return '<div style=\"height: 100%; width: 100%; text-align: center; vertical-align: middle;\">' + data + '</div>';",
+                  "}"
+                )
               )
             ),
             initComplete = DT::JS("function(settings, json) {
               var table = this.api();
-              $('#wlsData thead tr:eq(1)').find(\"input.form-control\").last().remove()
+              $('#wlsData thead tr:eq(1)').find(\"input.form-control\").last().remove();
+            }"),
+            drawCallback = DT::JS("function(settings) {
+              $('#wlsData tbody td:last-child').each(function() {
+                $(this).attr('title', 'Click to view frequency table for observed values');
+                $(this).css({
+                  'text-align': 'center',
+                  'vertical-align': 'middle'
+                });
+              });
+              $('[title]').tooltip({container: 'body'});
             }")
           ),
           escape = FALSE,
