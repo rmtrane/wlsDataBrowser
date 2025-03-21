@@ -6,6 +6,7 @@
 
 <!-- badges: start -->
 
+[![R-CMD-check](https://github.com/rmtrane/wlsDataBrowser/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/rmtrane/wlsDataBrowser/actions/workflows/R-CMD-check.yaml)
 <!-- badges: end -->
 
 This R-package contains a Shiny application to explore the WLS data. You
