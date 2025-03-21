@@ -17,7 +17,7 @@ For more details about the data, see the [WLS data portal](https://wls.portal.ss
 
 ## Installation
 
-You can install `wlsDataBrowser` using the `remotes` packages as follows:
+You can install `wlsDataBrowser` using the `remotes` packages as follows: 
 
 ``` r
 remotes::install_github("rmtrane/wlsDataBrowser")
