@@ -58,3 +58,5 @@ If using [Positron](https://positron.posit.co), the following snippet can be add
     }
 }
 ```
+
+Search for `Open Keyboard Shortcuts (JSON)` using the command palette (`cmd/ctrl+shift+p`) to open the `keybindings.json` file. 
