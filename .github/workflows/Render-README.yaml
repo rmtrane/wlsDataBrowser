@@ -1,0 +1,29 @@
+name: Render README
+
+concurrency:
+  group: "README"
+  cancel-in-progress: true
+
+on:
+  push:
+    paths: 
+      - README.qmd
+
+jobs:
+  quarto:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        
+      - name: Set up Quarto
+        uses: quarto-dev/quarto-actions/render@v2
+        with:
+          to: gfm
+          path: README.qmd
+      
+      - name: Commit results
+        run: |
+          git commit README.md -m "Re-build REAMDE.qmd on push" || echo "No changes to commit"
+          git push origin || echo "No changes to commit"
