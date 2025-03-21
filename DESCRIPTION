@@ -13,7 +13,6 @@ Imports:
     dplyr,
     DT,
     haven,
-    miniUI,
     reactable,
     shiny,
     shinycssloaders

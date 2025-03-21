@@ -1,3 +1,7 @@
+#' Launch WLS Data Browser
+#'
+#' Function to open the WLS Data Browser.
+#'
 #' @export
 wlsDataBrowser <- function() {
   old_shiny.maxRequestSize <- getOption("shiny.maxRequestSize")
@@ -7,31 +11,61 @@ wlsDataBrowser <- function() {
   ###########################
   ## UI
   ###########################
-  ui <- miniUI::miniPage(
-    theme = bslib::bs_theme(version = 4),
-    ## Change how selected rows are highlighted. (This "hack" works in conjunction with DT::selectRows which removes selections when not used.)
-    shiny::tags$style(
-      shiny::HTML("table.dataTable tr.active td, table.dataTable td.active {box-shadow: inset 0 0 0 9999px #e7e7e7 !important;}"),
-      shiny::HTML("td {color: black !important;}")
-    ),
-    miniUI::gadgetTitleBar("WLS Data Browser"),
-    miniUI::miniContentPanel(
-      ## If data path not provided through options, allow user to select file
-      if (is.null(getOption("wlsDataBrowser.data_path"))) {
-        shiny::fileInput(
-          "wls_data_path",
-          label = "Choose input file",
-          accept = "dta"
+  ui <- # miniUI::miniPage(
+    bslib::page_fluid(
+      shiny::tags$span(shiny::icon("tag"), style = "display: none;"), # necessary to display icons in datatable
+      theme = bslib::bs_theme(version = 5),
+      ## Change how selected rows are highlighted. (This "hack" works in conjunction with DT::selectCells which removes selections when not used.)
+      shiny::tags$head(
+        shiny::tags$style(
+          # shiny::HTML("table.dataTable tr.active td, table.dataTable td.active {box-shadow: inset 0 0 0 9999px #e7e7e7 !important;}"),
+          # shiny::HTML("td {color: black !important;}"),
+          shiny::HTML("
+            :root {
+              --title-box-shadow:;
+              --title-box-shadow-color-rgb: 29, 31, 33;
+            }
+            .custom-title {
+              display: flex;
+              align-items: center;
+              font-size: 24px;
+              font-weight: bold;
+              color:rgb(83, 90, 97);
+              text-align: center;
+              margin-top: 1rem;
+              margin-bottom: 1rem;
+              background-color: #f0f0f0; /* Grey background */
+              border-radius: 8px; /* Rounded corners */
+              padding: 10px; /* Padding for better appearance */
+              box-shadow: var(--title-box-shadow, 0px 0px 2px 0px RGBA(var(--title-box-shadow-color-rgb), 0.14), 0px 2px 4px 0px RGBA(var(--title-box-shadow-color-rgb), 0.16));
+            }")
         )
-      },
-      shiny::checkboxInput(
-        "value_tables",
-        "Show tables of values in data when rows are clicked (warning: slow!)",
-        width = "100%"
       ),
-      DT::dataTableOutput("wlsData")
+      ## Actual UI
+      # miniUI::gadgetTitleBar("WLS Data Browser"),
+      title = "WLS Data Browser",
+      # shiny::tags$div(
+      #   class = "custom-title",
+      bslib::layout_columns(
+        shiny::actionButton(inputId = "done", label = "Done"),
+        "WLS Data Browser",
+        col_widths = c(2, 8, -2),
+        class = "custom-title"
+        # )
+      ),
+      bslib::card(
+        ## If data path not provided through options, allow user to select file
+        if (is.null(getOption("wlsDataBrowser.data_path"))) {
+          shiny::fileInput(
+            "wls_data_path",
+            label = "Choose input file",
+            accept = "dta"
+          )
+        },
+        DT::dataTableOutput("wlsData"),
+        height = "90vh"
+      )
     )
-  )
 
   ###########################
   ## Server
@@ -39,7 +73,6 @@ wlsDataBrowser <- function() {
   server <- function(input, output, session) {
     ## Reactive values
     wls_data_path <- shiny::reactiveVal(getOption("wlsDataBrowser.data_path"))
-    # wls_data_tabl <- shiny::reactiveVal(getOption("wlsDataBrowser.data_path"))
     freq_table <- shiny::reactiveVal()
 
     ## When input$wls_data_path changes, update reactiveVal
@@ -48,10 +81,14 @@ wlsDataBrowser <- function() {
     ) |>
       shiny::bindEvent(input$wls_data_path)
 
-    ## When wls_data_path() is ready, read metadata, i.e. no rows!
+    ## When wls_data_path() is ready, read metadata only, i.e. no rows!
     wls_data_tabl <- shiny::reactive({
       if (!is.null(wls_data_path())) {
-        wls_data <- haven::read_dta(file = wls_data_path(), n_max = 0)
+        ## Read .dta file
+        wls_data <- haven::read_dta(
+          file = wls_data_path(),
+          n_max = 0
+        )
 
         ## Create table with variable names and labels
         out <- data.frame(
@@ -73,7 +110,14 @@ wlsDataBrowser <- function() {
           x = out$labels
         )
 
-        ## Update reactiveVal with created table
+        # ## Add column with buttons to show values tables
+        out$values <- as.character(bslib::tooltip(
+          trigger = shiny::icon("table-list"),
+          # "Trigger",
+          "Click for table of values..."
+        ))
+
+        ## Return created table
         out
       }
     })
@@ -82,20 +126,41 @@ wlsDataBrowser <- function() {
     output$wlsData <- DT::renderDataTable({
       if (!is.null(wls_data_tabl())) {
         DT::datatable(
-          wls_data_tabl()[, c("var_name", "visit", "labels")],
+          wls_data_tabl()[, c("var_name", "visit", "labels", "values")],
           colnames = c(
             "Variable name (as in data file)" = "var_name",
             "Round" = "visit",
-            "Variable Label (from data file)" = "labels"
+            "Variable Label (from data file)" = "labels",
+            " " = "values"
           ),
           rownames = F,
           filter = "top",
           class = "row-border compact hover",
           options = list(
             pageLength = 20,
-            lengthMenu = c(10, 20, 50, 100, 200)
+            lengthMenu = c(10, 20, 50, 100, 200),
+            columnDefs = list(
+              list(
+                targets = 3,
+                searchable = F,
+                orderable = F,
+                width = "20px"
+              )
+            ),
+            initComplete = DT::JS("function(settings, json) {
+              var table = this.api();
+              $('#wlsData thead tr:eq(1)').find(\"input.form-control\").last().remove()
+            }")
           ),
-          selection = "single"
+          escape = FALSE,
+          selection = list(
+            mode = "single",
+            target = "cell",
+            # Matrix with (row,col) that can be selected.
+            # Only allow the last column to be selected
+            # (Note: 0-indexed, i.e. fourth column = 3)
+            selectable = cbind(1:nrow(wls_data_tabl()), 3)
+          )
         )
       }
     })
@@ -106,17 +171,21 @@ wlsDataBrowser <- function() {
     ## When a row is selected and input$value_tables is checked, create frequency table
     ## for variable in row selected.
     shiny::observe({
-      if (!is.null(input$wlsData_rows_selected)) {
-        if (input$value_tables) {
-          shinycssloaders::showPageSpinner()
-          cur_col <- wls_data_tabl()$var_name[input$wlsData_rows_selected]
+      if (nrow(input$wlsData_cells_selected) == 1) {
+        shinycssloaders::showPageSpinner()
+        cur_col <- wls_data_tabl()$var_name[input$wlsData_cells_selected[1, 1]]
 
-          freq_table(table_values(cur_col, file = wls_data_path()))
-          shinycssloaders::hidePageSpinner()
-        }
+        freq_table(table_values(cur_col, file = wls_data_path()))
+        shinycssloaders::hidePageSpinner()
       }
     }) |>
-      shiny::bindEvent(input$wlsData_rows_selected)
+      shiny::bindEvent(input$wlsData_cells_selected)
+
+    # shiny::observe({
+    #   print(input$wlsData_cells_selected)
+    #   print(nrow(input$wlsData_cells_selected) == 0)
+    # }) |>
+    #   shiny::bindEvent(input$wlsData_cells_selected)
 
     ## Frequencey table for output
     output$freq_table <- reactable::renderReactable({
@@ -136,26 +205,26 @@ wlsDataBrowser <- function() {
 
     ## Show modal, or remove selection
     shiny::observe({
-      if (input$value_tables) {
+      if (nrow(input$wlsData_cells_selected) > 0) {
         shiny::showModal(
           shiny::modalDialog(
             shiny::tagList(
               shiny::uiOutput("for_modal")
             ),
-            title = shiny::HTML(with(wls_data_tabl()[input$wlsData_rows_selected, ], paste0(var_name, ": ", labels))),
+            title = shiny::HTML(with(wls_data_tabl()[input$wlsData_cells_selected[1, 1], ], paste0(var_name, ": ", labels))),
             size = "xl",
             footer = shiny::actionButton("return", "Return")
           )
         )
       } else {
-        DT::selectRows(proxy = wlsDataProxy, selected = NULL)
+        DT::selectCells(proxy = wlsDataProxy, selected = NULL)
       }
     }) |>
-      shiny::bindEvent(input$wlsData_rows_selected)
+      shiny::bindEvent(input$wlsData_cells_selected)
 
     ## When return button is clicked in popup modal, remove modal and unselect row.
     shiny::observe({
-      DT::selectRows(proxy = wlsDataProxy, selected = NULL)
+      DT::selectCells(proxy = wlsDataProxy, selected = NULL)
       shiny::removeModal()
     }) |>
       shiny::bindEvent(input$return)
