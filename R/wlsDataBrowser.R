@@ -233,7 +233,7 @@ wlsDataBrowser <- function() {
             ),
             title = shiny::HTML(with(wls_data_tabl()[input$wlsData_cells_selected[1, 1], ], paste0(var_name, ": ", labels))),
             size = "xl",
-            footer = shiny::actionButton("return", "Return")
+            footer = shiny::actionButton("close", "Return")
           )
         )
       } else {
@@ -247,7 +247,7 @@ wlsDataBrowser <- function() {
       DT::selectCells(proxy = wlsDataProxy, selected = NULL)
       shiny::removeModal()
     }) |>
-      shiny::bindEvent(input$return)
+      shiny::bindEvent(input$close)
 
 
     ## When user clicks "Done", reset maxRequestSize
