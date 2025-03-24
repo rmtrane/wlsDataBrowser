@@ -58,7 +58,7 @@ can be added to `keybindings.json` to easily launch the data browser
 ``` json
 {
     "key": "cmd+alt+shift+w",
-    "command": "workbench.action.executeCode.silently",
+    "command": "workbench.action.executeCode.console",
     "description": "Browse WLS Data",
     "args": {
         "langId": "r",
