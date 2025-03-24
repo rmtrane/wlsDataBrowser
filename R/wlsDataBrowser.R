@@ -39,7 +39,14 @@ wlsDataBrowser <- function() {
             background-color: #f0f0f0; /* Grey background */
             border-radius: 8px; /* Rounded corners */
             padding: 18px; /* Padding for better appearance */
-          }"),
+          }
+
+          /* Adjust width of modal dialog */
+          .modal-dialog {
+            max-width: 80% !important; /* Adjust the percentage as needed */
+          }
+
+        "),
       ## Actual UI
       title = "WLS Data Browser",
       ##
@@ -235,8 +242,9 @@ wlsDataBrowser <- function() {
               shiny::uiOutput("for_modal")
             ),
             title = shiny::HTML(with(wls_data_tabl()[input$wlsData_cells_selected[1, 1], ], paste0(var_name, ": ", labels))),
-            size = "xl",
-            footer = shiny::actionButton("close", "Return")
+            # size = "xl",
+            footer = shiny::actionButton("close", "Return"),
+            easyClose = T
           )
         )
       } else {
