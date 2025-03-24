@@ -34,11 +34,11 @@ wlsDataBrowser <- function() {
             font-weight: bold;
             color:rgb(83, 90, 97);
             text-align: center;
-            margin-top: 1rem;
-            margin-bottom: 1rem;
+            margin-top: 0.5rem;
+            margin-bottom: 0.5rem;
             background-color: #f0f0f0; /* Grey background */
             border-radius: 8px; /* Rounded corners */
-            padding: 10px; /* Padding for better appearance */
+            padding: 18px; /* Padding for better appearance */
           }"),
       ## Actual UI
       title = "WLS Data Browser",
@@ -169,7 +169,10 @@ wlsDataBrowser <- function() {
                   'vertical-align': 'middle'
                 });
               });
-              $('[title]').tooltip({container: 'body'});
+              $('[title]').tooltip({
+                container: 'body',
+                delay: { show: 750, hide: 0 }
+              });
             }")
           ),
           escape = FALSE,
@@ -242,7 +245,7 @@ wlsDataBrowser <- function() {
     }) |>
       shiny::bindEvent(input$wlsData_cells_selected)
 
-    ## When return button is clicked in popup modal, remove modal and unselect row.
+    ## When returngit  button is clicked in popup modal, remove modal and unselect row.
     shiny::observe({
       DT::selectCells(proxy = wlsDataProxy, selected = NULL)
       shiny::removeModal()
