@@ -5,7 +5,7 @@
 #'
 table_values <- function(
     cur_col = "selsibtype",
-    file = getOption("wlsDataPath")) {
+    file = getOption("wlsDataBrowser.data_path")) {
   x <- haven::read_dta(file, col_select = dplyr::all_of(cur_col))[[1]]
 
   value_labels <- attr(x, "labels")
@@ -43,7 +43,8 @@ table_values <- function(
     columns = list(
       values = reactable::colDef(
         name = "Value",
-        maxWidth = 12 * 8
+        headerClass = "nowrap",
+        minWidth = 12 * 6
       ),
       label = reactable::colDef(name = "Label"),
       valid = reactable::colDef(
@@ -63,12 +64,13 @@ table_values <- function(
         },
         align = "center",
         vAlign = "top",
-        width = 12 * 6
+        width = 12 * 5
       ),
       n = reactable::colDef(
         name = "Frequency",
-        width = 12 * nchar("Frequency"),
-        format = reactable::colFormat(separators = T)
+        width = 11 * nchar("Frequency"),
+        format = reactable::colFormat(separators = T),
+        headerClass = "nowrap"
       ),
       percent = reactable::colDef(
         name = "Percent of all",
@@ -76,7 +78,8 @@ table_values <- function(
         align = "left",
         vAlign = "top",
         format = reactable::colFormat(percent = T, digits = 1),
-        width = 12 * nchar("percent of all")
+        headerClass = "nowrap",
+        width = 9 * nchar("percent of all")
       ),
       percent_valid = reactable::colDef(
         name = "Percent of valid",
@@ -84,12 +87,14 @@ table_values <- function(
         align = "left",
         vAlign = "top",
         format = reactable::colFormat(percent = T, digits = 1),
-        width = 12 * nchar("percent of valid")
+        headerClass = "nowrap",
+        width = 9 * nchar("percent of valid")
       )
     )[colnames(for_out)], # Only keep colDefs for columns in for_out
     showPageSizeOptions = T,
     defaultPageSize = 25,
-    pageSizeOptions = c(10, 25, 50)
+    pageSizeOptions = c(10, 25, 50),
+    bordered = T
   )
 }
 

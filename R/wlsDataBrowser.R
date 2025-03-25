@@ -22,7 +22,7 @@ wlsDataBrowser <- function() {
           /* CSS */
 
           /* Background color when hovering last column of wlsData */
-          #wlsData tbody td:last-child:hover {
+          #wlsData tbody td:nth-child(n+4):hover {
             --bs-table-hover-bg: rgb(141, 204, 252) !important;
           }
 
@@ -44,6 +44,11 @@ wlsDataBrowser <- function() {
           /* Adjust width of modal dialog */
           .modal-dialog {
             max-width: 80% !important; /* Adjust the percentage as needed */
+          }
+
+          /* No wrap */
+          .nowrap {
+            white-space: nowrap;
           }
 
         "),
@@ -82,6 +87,10 @@ wlsDataBrowser <- function() {
     ## Reactive values
     wls_data_path <- shiny::reactiveVal(getOption("wlsDataBrowser.data_path"))
     freq_table <- shiny::reactiveVal()
+    var_clicked <- shiny::reactiveVal()
+
+
+    rstudioapi_available <- requireNamespace("rstudioapi", quietly = TRUE) && rstudioapi::isAvailable()
 
     ## When input$wls_data_path changes, update reactiveVal
     shiny::observe(
@@ -127,13 +136,19 @@ wlsDataBrowser <- function() {
     output$wlsData <- DT::renderDataTable({
       if (!is.null(wls_data_tabl())) {
         DT::datatable(
-          ## Add extra column to hold table icons, and function
-          ## as triggers for displaying frequency tables
+          ## Add extra columns to hold table and copy/paste icons.
+          ## These will function as triggers for displaying frequency
+          ## and copy variable to file
           cbind(
             wls_data_tabl()[, c("var_name", "visit", "labels")],
             "extra" = rep(
               ## Icon to show
               as.character(shiny::icon("table-list")),
+              nrow(wls_data_tabl())
+            ),
+            "extra2" = rep(
+              ## Icon to show
+              as.character(shiny::icon("copy")),
               nrow(wls_data_tabl())
             )
           ),
@@ -141,7 +156,8 @@ wlsDataBrowser <- function() {
             "Variable name (as in data file)" = "var_name",
             "Round" = "visit",
             "Variable Label (from data file)" = "labels",
-            " " = "extra"
+            " " = "extra",
+            " " = "extra2"
           ),
           rownames = F,
           filter = "top",
@@ -150,10 +166,11 @@ wlsDataBrowser <- function() {
             pageLength = 10,
             lengthMenu = c(10, 20, 50, 100, 200),
             columnDefs = list(
+              list(targets = 4, visible = rstudioapi_available),
               list(targets = 0, width = "250px"),
               list(targets = 1, width = "50px"),
               list(
-                targets = 3,
+                targets = c(3, 4)[c(T, rstudioapi_available)],
                 searchable = F,
                 orderable = F,
                 width = "20px",
@@ -164,23 +181,36 @@ wlsDataBrowser <- function() {
                 )
               )
             ),
-            initComplete = DT::JS("function(settings, json) {
-              var table = this.api();
-              $('#wlsData thead tr:eq(1)').find(\"input.form-control\").last().remove();
-            }"),
-            drawCallback = DT::JS("function(settings) {
-              $('#wlsData tbody td:last-child').each(function() {
-                $(this).attr('title', 'Click to view frequency table for observed values');
-                $(this).css({
-                  'text-align': 'center',
-                  'vertical-align': 'middle'
+            initComplete = DT::JS(
+              "function(settings, json) {
+                var table = this.api();
+                $('#wlsData thead tr:eq(1)').find(\"input.form-control:disabled\").remove();
+              }"
+            ),
+            drawCallback = DT::JS(
+              "function(settings) {
+                $('#wlsData tbody td:nth-child(5)').each(function() {
+                  $(this).attr('title', 'Click to copy variable to active file');
+                  $(this).css({
+                    'text-align': 'center',
+                    'vertical-align': 'middle'
+                  });
                 });
-              });
-              $('[title]').tooltip({
-                container: 'body',
-                delay: { show: 750, hide: 0 }
-              });
-            }")
+
+                $('#wlsData tbody td:nth-child(4)').each(function() {
+                  $(this).attr('title', 'Click to view frequency table for observed values');
+                  $(this).css({
+                    'text-align': 'center',
+                    'vertical-align': 'middle'
+                  });
+                });
+
+                $('[title]').tooltip({
+                  container: 'body',
+                  delay: { show: 750, hide: 0 }
+                });
+              }"
+            )
           ),
           escape = FALSE,
           selection = list(
@@ -189,7 +219,7 @@ wlsDataBrowser <- function() {
             # Matrix with (row,col) that can be selected.
             # Only allow the last column to be selected
             # (Note: 0-indexed, i.e. fourth column = 3)
-            selectable = cbind(1:nrow(wls_data_tabl()), 3)
+            selectable = rbind(cbind(1:nrow(wls_data_tabl()), 3), cbind(1:nrow(wls_data_tabl()), 4))
           )
         )
       }
@@ -202,20 +232,18 @@ wlsDataBrowser <- function() {
     ## for variable in row selected.
     shiny::observe({
       if (nrow(input$wlsData_cells_selected) == 1) {
-        shinycssloaders::showPageSpinner()
-        cur_col <- wls_data_tabl()$var_name[input$wlsData_cells_selected[1, 1]]
+        col_clicked <- input$wlsData_cells_selected[1, 2]
 
-        freq_table(table_values(cur_col, file = wls_data_path()))
-        shinycssloaders::hidePageSpinner()
+        if (col_clicked == 3) {
+          shinycssloaders::showPageSpinner()
+          cur_col <- wls_data_tabl()$var_name[input$wlsData_cells_selected[1, 1]]
+
+          freq_table(table_values(cur_col, file = wls_data_path()))
+          shinycssloaders::hidePageSpinner()
+        }
       }
     }) |>
       shiny::bindEvent(input$wlsData_cells_selected)
-
-    # shiny::observe({
-    #   print(input$wlsData_cells_selected)
-    #   print(nrow(input$wlsData_cells_selected) == 0)
-    # }) |>
-    #   shiny::bindEvent(input$wlsData_cells_selected)
 
     ## Frequencey table for output
     output$freq_table <- reactable::renderReactable({
@@ -224,7 +252,7 @@ wlsDataBrowser <- function() {
       }
     })
 
-    ## Create UI for the popup modal
+    ## Create UI for the popup modal for frequency table
     output$for_modal <- shiny::renderUI({
       if (inherits(freq_table(), "reactable")) {
         reactable::reactableOutput("freq_table")
@@ -236,17 +264,33 @@ wlsDataBrowser <- function() {
     ## Show modal, or remove selection
     shiny::observe({
       if (nrow(input$wlsData_cells_selected) > 0) {
-        shiny::showModal(
-          shiny::modalDialog(
-            shiny::tagList(
-              shiny::uiOutput("for_modal")
-            ),
-            title = shiny::HTML(with(wls_data_tabl()[input$wlsData_cells_selected[1, 1], ], paste0(var_name, ": ", labels))),
-            # size = "xl",
-            footer = shiny::actionButton("close", "Return"),
-            easyClose = T
+        col_clicked <- input$wlsData_cells_selected[1, 2]
+        var_clicked(wls_data_tabl()$var_name[input$wlsData_cells_selected[1, 1]])
+
+        if (col_clicked == 3) {
+          shiny::showModal(
+            shiny::modalDialog(
+              shiny::tagList(
+                shiny::uiOutput("for_modal")
+              ),
+              title = shiny::HTML(with(wls_data_tabl()[input$wlsData_cells_selected[1, 1], ], paste0(var_name, ": ", labels))),
+              footer = shiny::actionButton("close", "Return"),
+              easyClose = T
+            )
           )
-        )
+        } else {
+          shiny::showModal(
+            shiny::modalDialog(
+              shiny::p("Write new variable name to use for variable in the text input box below. If left blank, no new name will be prepended."),
+              shiny::textInput("new_col_name", "New variable name"),
+              footer = bslib::layout_columns(
+                shiny::actionButton("close_copy", "Cancel"),
+                shiny::actionButton("insert", "Insert Text"),
+                col_widths = c(4, -4, 4)
+              )
+            )
+          )
+        }
       } else {
         DT::selectCells(proxy = wlsDataProxy, selected = NULL)
       }
@@ -258,8 +302,31 @@ wlsDataBrowser <- function() {
       DT::selectCells(proxy = wlsDataProxy, selected = NULL)
       shiny::removeModal()
     }) |>
-      shiny::bindEvent(input$close)
+      shiny::bindEvent(
+        input$close,
+        input$close_copy,
+        input$insert
+      )
 
+    shiny::observe({
+      if (rstudioapi_available) {
+        ad_context <- rstudioapi::getActiveDocumentContext()
+
+        if (input$new_col_name == "") {
+          text_to_insert <- var_clicked()
+        } else {
+          text_to_insert <- paste0(
+            "\"", input$new_col_name, "\" = \"", var_clicked(), "\""
+          )
+        }
+
+        rstudioapi::insertText(
+          location = ad_context$selection[[1]]$range$start,
+          text = text_to_insert
+        )
+      }
+    }) |>
+      shiny::bindEvent(input$insert)
 
     ## When user clicks "Done", reset maxRequestSize
     shiny::observe({
@@ -275,6 +342,5 @@ wlsDataBrowser <- function() {
     })
   }
 
-  viewer <- shiny::browserViewer()
-  shiny::runGadget(ui, server, viewer = viewer)
+  shiny::runGadget(ui, server)
 }

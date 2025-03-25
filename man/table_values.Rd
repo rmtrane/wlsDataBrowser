@@ -4,7 +4,10 @@
 \alias{table_values}
 \title{Frequency Table using reactable}
 \usage{
-table_values(cur_col = "selsibtype", file = getOption("wlsDataPath"))
+table_values(
+  cur_col = "selsibtype",
+  file = getOption("wlsDataBrowser.data_path")
+)
 }
 \arguments{
 \item{cur_col}{string; name of column to create frequency table from}
