@@ -13,144 +13,15 @@ wlsDataBrowser <- function() {
   ###########################
   ui <- # miniUI::miniPage(
     bslib::page_fluid(
-      shiny::tags$span(shiny::icon("tag"), style = "display: none;"), # necessary to display icons in datatable
-      shiny::tags$head(shiny::tags$script(shiny::HTML("
-        function setTooltips() {
-          const cells = document.querySelectorAll('.reactable .rt-td-inner');
-          cells.forEach(cell => {
-            if (cell.scrollWidth > cell.clientWidth) {
-              cell.setAttribute('data-bs-original-title', cell.textContent);
-            } else {
-              cell.removeAttribute('data-bs-original-title');
-            }
-          });
-
-          document.querySelectorAll('.freq-tables .rt-td-inner').forEach(cell => {
-            cell.setAttribute('data-bs-original-title', 'Click for frequency table...');
-          });
-          document.querySelectorAll('.copy-var .rt-td-inner').forEach(cell => {
-            cell.setAttribute('data-bs-original-title', 'Click to copy variable to active document...');
-          });
-
-        };
-
-        window.onresize = (event) => {
-          console.log('Resizing...');
-          setTooltips();
-        };
-
-        Shiny.addCustomMessageHandler('showSpinner', function(value) {
-          if (value) {
-            document.getElementById('content').classList.add('blur-background');
-            document.getElementById('spinner').style.display = 'block';
-          } else {
-            document.getElementById('content').classList.remove('blur-background');
-            document.getElementById('spinner').style.display = 'none';
-          }
-        });
-
-        Shiny.addCustomMessageHandler('reset_input', function(value) {
-          Shiny.setInputValue(value, null);
-        });
-      "))),
-      theme = bslib::bs_theme(
-        version = 5
-      ) |>
-        bslib::bs_add_rules("
-          /* CSS */
-
-          /* Background color when hovering last column of wlsData */
-          #wlsData .rt-tbody .rt-tr .rt-td:nth-child(n+4):hover {
-            background-color: rgb(141, 204, 252) !important;
-          }
-
-          #wlsData .rt-td-inner {
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-          }
-
-          /* Style title */
-          .custom-title {
-            display: flex;
-            align-items: center;
-            font-size: 24px;
-            font-weight: bold;
-            color:rgb(83, 90, 97);
-            text-align: center;
-            margin-top: 0.5rem;
-            margin-bottom: 0.5rem;
-            background-color: #f0f0f0; /* Grey background */
-            border-radius: 8px; /* Rounded corners */
-            padding: 18px; /* Padding for better appearance */
-          }
-
-          /* Adjust width of modal dialog */
-          .modal-dialog {
-            max-width: 80% !important; /* Adjust the percentage as needed */
-          }
-
-          /* No wrap */
-          .nowrap {
-            white-space: nowrap;
-          }
-
-          /* Spinner... */
-          .loader {
-            border: 16px solid #f3f3f3;
-            border-radius: 50%;
-            border-top: 16px solid #3498db;
-            width: 120px;
-            height: 120px;
-            animation: spin 2s linear infinite;
-            position: fixed;
-            top: 40%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            display: none;
-            z-index: 9999;
-          }
-          @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-          }
-
-          .blur-background {
-            filter: blur(5px);
-          }
-
-          /* Tooltip... */
-          .tooltip {
-            position: relative;
-            display: inline-block;
-            cursor: pointer;
-          }
-
-          .tooltip::after {
-              content: attr(data-tooltip);
-              position: absolute;
-              bottom: 100%;
-              left: 50%;
-              transform: translateX(-50%);
-              background-color: #333;
-              color: #fff;
-              padding: 5px;
-              border-radius: 5px;
-              white-space: nowrap;
-              opacity: 0;
-              visibility: hidden;
-              transition: opacity 0.3s;
-          }
-
-          .tooltip:hover::after {
-              opacity: 1;
-              visibility: visible;
-          }
-      "),
-      ## Actual UI
-      title = "WLS Data Browser",
-      ##
+      ## Add JS functions
+      shiny::tags$head(shiny::tags$script(shiny::HTML(my_js_functions()))),
+      ## Add theme
+      theme = my_bs_theme(),
+      ## Add spinner to be shown/hidden
       shiny::tags$div(id = "spinner", class = "loader"),
+      ## Add title
+      title = "WLS Data Browser",
+      ## Actual UI
       bslib::layout_columns(
         "WLS Data Browser",
         shiny::actionButton(
@@ -242,12 +113,12 @@ wlsDataBrowser <- function() {
               wls_data_tabl()[, c("var_name", "visit", "labels")],
               "freq_table" = rep(
                 ## Icon to show
-                as.character(shiny::icon("table-list")),
+                as.character(shiny::icon("th-list", lib = "glyphicon")),
                 nrow(wls_data_tabl())
               ),
               "copy_to_file" = rep(
                 ## Icon to show
-                as.character(shiny::icon("copy")),
+                as.character(shiny::icon("copy", lib = "glyphicon")),
                 nrow(wls_data_tabl())
               )
             ),
