@@ -11,10 +11,8 @@ RoxygenNote: 7.3.2
 Imports: 
     bslib,
     dplyr,
-    DT,
     haven,
     reactable,
-    shiny,
-    shinycssloaders
+    shiny
 Suggests: 
     rstudioapi

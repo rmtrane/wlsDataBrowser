@@ -14,16 +14,60 @@ wlsDataBrowser <- function() {
   ui <- # miniUI::miniPage(
     bslib::page_fluid(
       shiny::tags$span(shiny::icon("tag"), style = "display: none;"), # necessary to display icons in datatable
+      shiny::tags$head(shiny::tags$script(shiny::HTML("
+        function setTooltips() {
+          const cells = document.querySelectorAll('.reactable .rt-td-inner');
+          cells.forEach(cell => {
+            if (cell.scrollWidth > cell.clientWidth) {
+              cell.setAttribute('data-bs-original-title', cell.textContent);
+            } else {
+              cell.removeAttribute('data-bs-original-title');
+            }
+          });
+
+          document.querySelectorAll('.freq-tables .rt-td-inner').forEach(cell => {
+            cell.setAttribute('data-bs-original-title', 'Click for frequency table...');
+          });
+          document.querySelectorAll('.copy-var .rt-td-inner').forEach(cell => {
+            cell.setAttribute('data-bs-original-title', 'Click to copy variable to active document...');
+          });
+
+        };
+
+        window.onresize = (event) => {
+          console.log('Resizing...');
+          setTooltips();
+        };
+
+        Shiny.addCustomMessageHandler('showSpinner', function(value) {
+          if (value) {
+            document.getElementById('content').classList.add('blur-background');
+            document.getElementById('spinner').style.display = 'block';
+          } else {
+            document.getElementById('content').classList.remove('blur-background');
+            document.getElementById('spinner').style.display = 'none';
+          }
+        });
+
+        Shiny.addCustomMessageHandler('reset_input', function(value) {
+          Shiny.setInputValue(value, null);
+        });
+      "))),
       theme = bslib::bs_theme(
-        version = 5,
-        "table-hover-bg" = "rgb(223, 223, 223)"
+        version = 5
       ) |>
         bslib::bs_add_rules("
           /* CSS */
 
           /* Background color when hovering last column of wlsData */
-          #wlsData tbody td:nth-child(n+4):hover {
-            --bs-table-hover-bg: rgb(141, 204, 252) !important;
+          #wlsData .rt-tbody .rt-tr .rt-td:nth-child(n+4):hover {
+            background-color: rgb(141, 204, 252) !important;
+          }
+
+          #wlsData .rt-td-inner {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
           }
 
           /* Style title */
@@ -51,10 +95,62 @@ wlsDataBrowser <- function() {
             white-space: nowrap;
           }
 
-        "),
+          /* Spinner... */
+          .loader {
+            border: 16px solid #f3f3f3;
+            border-radius: 50%;
+            border-top: 16px solid #3498db;
+            width: 120px;
+            height: 120px;
+            animation: spin 2s linear infinite;
+            position: fixed;
+            top: 40%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            display: none;
+            z-index: 9999;
+          }
+          @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+          }
+
+          .blur-background {
+            filter: blur(5px);
+          }
+
+          /* Tooltip... */
+          .tooltip {
+            position: relative;
+            display: inline-block;
+            cursor: pointer;
+          }
+
+          .tooltip::after {
+              content: attr(data-tooltip);
+              position: absolute;
+              bottom: 100%;
+              left: 50%;
+              transform: translateX(-50%);
+              background-color: #333;
+              color: #fff;
+              padding: 5px;
+              border-radius: 5px;
+              white-space: nowrap;
+              opacity: 0;
+              visibility: hidden;
+              transition: opacity 0.3s;
+          }
+
+          .tooltip:hover::after {
+              opacity: 1;
+              visibility: visible;
+          }
+      "),
       ## Actual UI
       title = "WLS Data Browser",
       ##
+      shiny::tags$div(id = "spinner", class = "loader"),
       bslib::layout_columns(
         "WLS Data Browser",
         shiny::actionButton(
@@ -67,6 +163,7 @@ wlsDataBrowser <- function() {
         # )
       ),
       bslib::card(
+        id = "content",
         ## If data path not provided through options, allow user to select file
         if (is.null(getOption("wlsDataBrowser.data_path"))) {
           shiny::fileInput(
@@ -75,7 +172,8 @@ wlsDataBrowser <- function() {
             accept = "dta"
           )
         },
-        DT::dataTableOutput("wlsData"),
+        # DT::dataTableOutput("wlsData"),
+        reactable::reactableOutput("wlsData"),
         height = "85vh"
       )
     )
@@ -89,7 +187,7 @@ wlsDataBrowser <- function() {
     freq_table <- shiny::reactiveVal()
     var_clicked <- shiny::reactiveVal()
 
-
+    ## Binary to indicate if rstudioapi is available
     rstudioapi_available <- requireNamespace("rstudioapi", quietly = TRUE) && rstudioapi::isAvailable()
 
     ## When input$wls_data_path changes, update reactiveVal
@@ -133,200 +231,181 @@ wlsDataBrowser <- function() {
     })
 
     ## datatable to show
-    output$wlsData <- DT::renderDataTable({
-      if (!is.null(wls_data_tabl())) {
-        DT::datatable(
-          ## Add extra columns to hold table and copy/paste icons.
-          ## These will function as triggers for displaying frequency
-          ## and copy variable to file
-          cbind(
-            wls_data_tabl()[, c("var_name", "visit", "labels")],
-            "extra" = rep(
-              ## Icon to show
-              as.character(shiny::icon("table-list")),
-              nrow(wls_data_tabl())
-            ),
-            "extra2" = rep(
-              ## Icon to show
-              as.character(shiny::icon("copy")),
-              nrow(wls_data_tabl())
-            )
-          ),
-          colnames = c(
-            "Variable name (as in data file)" = "var_name",
-            "Round" = "visit",
-            "Variable Label (from data file)" = "labels",
-            " " = "extra",
-            " " = "extra2"
-          ),
-          rownames = F,
-          filter = "top",
-          class = "row-border compact hover",
-          options = list(
-            pageLength = 10,
-            lengthMenu = c(10, 20, 50, 100, 200),
-            columnDefs = list(
-              list(targets = 4, visible = rstudioapi_available),
-              list(targets = 0, width = "250px"),
-              list(targets = 1, width = "50px"),
-              list(
-                targets = c(3, 4)[c(T, rstudioapi_available)],
-                searchable = F,
-                orderable = F,
-                width = "20px",
-                render = DT::JS(
-                  "function(data, type, row, meta) {",
-                  "return '<div style=\"height: 100%; width: 100%; text-align: center; vertical-align: middle;\">' + data + '</div>';",
-                  "}"
-                )
+    output$wlsData <- # DT::renderDataTable({
+      reactable::renderReactable({
+        if (!is.null(wls_data_tabl())) {
+          reactable_tbl <- reactable::reactable(
+            ## Add extra columns to hold table and copy/paste icons.
+            ## These will function as triggers for displaying frequency
+            ## and copy variable to file
+            cbind(
+              wls_data_tabl()[, c("var_name", "visit", "labels")],
+              "freq_table" = rep(
+                ## Icon to show
+                as.character(shiny::icon("table-list")),
+                nrow(wls_data_tabl())
+              ),
+              "copy_to_file" = rep(
+                ## Icon to show
+                as.character(shiny::icon("copy")),
+                nrow(wls_data_tabl())
               )
             ),
-            initComplete = DT::JS(
-              "function(settings, json) {
-                var table = this.api();
-                $('#wlsData thead tr:eq(1)').find(\"input.form-control:disabled\").remove();
-              }"
+            columns = list(
+              var_name = reactable::colDef(
+                name = "Variable Name (as in data file)",
+                width = 280
+              ),
+              visit = reactable::colDef(
+                name = "Round",
+                width = 90
+              ),
+              labels = reactable::colDef(
+                name = "Variable Label (from data file)"
+              ),
+              freq_table = reactable::colDef(
+                name = "",
+                html = T,
+                width = 35,
+                align = "center",
+                vAlign = "center",
+                filterable = F,
+                style = "cursor: pointer;",
+                class = "freq-tables"
+              ),
+              copy_to_file = reactable::colDef(
+                name = "",
+                html = TRUE,
+                width = 35,
+                filterable = F,
+                show = rstudioapi_available,
+                align = "center",
+                vAlign = "center",
+                style = "cursor: pointer;",
+                class = "copy-var"
+              )
             ),
-            drawCallback = DT::JS(
-              "function(settings) {
-                $('#wlsData tbody td:nth-child(5)').each(function() {
-                  $(this).attr('title', 'Click to copy variable to active file');
-                  $(this).css({
-                    'text-align': 'center',
-                    'vertical-align': 'middle'
-                  });
-                });
+            onClick = reactable::JS("function(rowInfo, colInfo) {
+              if (colInfo.id == 'freq_table' || colInfo.id == 'copy_to_file') {
+                Shiny.setInputValue(colInfo.id, rowInfo.id);
+              };
+            }"),
+            searchable = TRUE,
+            filterable = TRUE,
+            highlight = TRUE,
+            showPageSizeOptions = TRUE
+          )
 
-                $('#wlsData tbody td:nth-child(4)').each(function() {
-                  $(this).attr('title', 'Click to view frequency table for observed values');
-                  $(this).css({
-                    'text-align': 'center',
-                    'vertical-align': 'middle'
-                  });
-                });
+          ## Add JS to register onStateChange. A little hacky to avoid
+          ## htmlwidgets dependency
+          reactable_tbl$jsHooks[["render"]] <- c(
+            reactable_tbl$jsHooks[["render"]],
+            list(list(code = reactable::JS("() =>{
+                Reactable.onStateChange('wlsData', function(state) {
+                  console.log('State change...');
+                  setTooltips();
 
-                $('[title]').tooltip({
-                  container: 'body',
-                  delay: { show: 750, hide: 0 }
+                  $('#wlsData').find('.rt-td-inner[data-bs-original-title]').tooltip({container: 'body'});
                 });
-              }"
-            )
-          ),
-          escape = FALSE,
-          selection = list(
-            mode = "single",
-            target = "cell",
-            # Matrix with (row,col) that can be selected.
-            # Only allow the last column to be selected
-            # (Note: 0-indexed, i.e. fourth column = 3)
-            selectable = rbind(cbind(1:nrow(wls_data_tabl()), 3), cbind(1:nrow(wls_data_tabl()), 4))
+              }"), data = NULL))
+          )
+
+          reactable_tbl
+        }
+      })
+
+    shiny::observe({
+      ## If triggered
+      # if (!is.null(input$freq_table)) {
+      session$sendCustomMessage("showSpinner", TRUE)
+
+      cur_var <- wls_data_tabl()$var_name[
+        as.numeric(input$freq_table) + 1
+      ]
+
+      cur_label <- wls_data_tabl()$labels[
+        as.numeric(input$freq_table) + 1
+      ]
+
+      freq_tab <- table_values(cur_var, file = wls_data_path())
+
+
+      session$sendCustomMessage("showSpinner", FALSE)
+
+      shiny::showModal(
+        shiny::modalDialog(
+          reactable::renderReactable(freq_tab),
+          title = shiny::HTML(paste0(cur_var, ": ", cur_label)),
+          footer = shiny::actionButton("close_freq_table", "Return"),
+          easyClose = F
+        )
+      )
+      # }
+    }) |>
+      shiny::bindEvent(input$freq_table)
+
+    shiny::observe({
+      shiny::showModal(
+        shiny::modalDialog(
+          shiny::p("Write new variable name to use for variable in the text input box below. If left blank, no new name will be prepended."),
+          shiny::textInput("new_col_name", "New variable name"),
+          footer = bslib::layout_columns(
+            shiny::actionButton("close_copy", "Cancel"),
+            shiny::actionButton("insert", "Insert Text"),
+            col_widths = c(4, -4, 4)
           )
         )
-      }
-    })
-
-    ## Create proxy data table
-    wlsDataProxy <- DT::dataTableProxy("wlsData")
-
-    ## When a row is selected and input$value_tables is checked, create frequency table
-    ## for variable in row selected.
-    shiny::observe({
-      if (nrow(input$wlsData_cells_selected) == 1) {
-        col_clicked <- input$wlsData_cells_selected[1, 2]
-
-        if (col_clicked == 3) {
-          shinycssloaders::showPageSpinner()
-          cur_col <- wls_data_tabl()$var_name[input$wlsData_cells_selected[1, 1]]
-
-          freq_table(table_values(cur_col, file = wls_data_path()))
-          shinycssloaders::hidePageSpinner()
-        }
-      }
-    }) |>
-      shiny::bindEvent(input$wlsData_cells_selected)
-
-    ## Frequencey table for output
-    output$freq_table <- reactable::renderReactable({
-      if (inherits(freq_table(), "reactable")) {
-        freq_table()
-      }
-    })
-
-    ## Create UI for the popup modal for frequency table
-    output$for_modal <- shiny::renderUI({
-      if (inherits(freq_table(), "reactable")) {
-        reactable::reactableOutput("freq_table")
-      } else {
-        shiny::h2(freq_table())
-      }
-    })
-
-    ## Show modal, or remove selection
-    shiny::observe({
-      if (nrow(input$wlsData_cells_selected) > 0) {
-        col_clicked <- input$wlsData_cells_selected[1, 2]
-        var_clicked(wls_data_tabl()$var_name[input$wlsData_cells_selected[1, 1]])
-
-        if (col_clicked == 3) {
-          shiny::showModal(
-            shiny::modalDialog(
-              shiny::tagList(
-                shiny::uiOutput("for_modal")
-              ),
-              title = shiny::HTML(with(wls_data_tabl()[input$wlsData_cells_selected[1, 1], ], paste0(var_name, ": ", labels))),
-              footer = shiny::actionButton("close", "Return"),
-              easyClose = T
-            )
-          )
-        } else {
-          shiny::showModal(
-            shiny::modalDialog(
-              shiny::p("Write new variable name to use for variable in the text input box below. If left blank, no new name will be prepended."),
-              shiny::textInput("new_col_name", "New variable name"),
-              footer = bslib::layout_columns(
-                shiny::actionButton("close_copy", "Cancel"),
-                shiny::actionButton("insert", "Insert Text"),
-                col_widths = c(4, -4, 4)
-              )
-            )
-          )
-        }
-      } else {
-        DT::selectCells(proxy = wlsDataProxy, selected = NULL)
-      }
-    }) |>
-      shiny::bindEvent(input$wlsData_cells_selected)
-
-    ## When returngit  button is clicked in popup modal, remove modal and unselect row.
-    shiny::observe({
-      DT::selectCells(proxy = wlsDataProxy, selected = NULL)
-      shiny::removeModal()
-    }) |>
-      shiny::bindEvent(
-        input$close,
-        input$close_copy,
-        input$insert
       )
+    }) |>
+      shiny::bindEvent(input$copy_to_file)
 
     shiny::observe({
       if (rstudioapi_available) {
         ad_context <- rstudioapi::getActiveDocumentContext()
 
+        cur_var <- wls_data_tabl()$var_name[
+          as.numeric(input$copy_to_file) + 1
+        ]
+
         if (input$new_col_name == "") {
-          text_to_insert <- var_clicked()
+          text_to_insert <- cur_var
         } else {
           text_to_insert <- paste0(
-            "\"", input$new_col_name, "\" = \"", var_clicked(), "\""
+            "\"", input$new_col_name, "\" = \"", cur_var, "\""
           )
         }
 
-        rstudioapi::insertText(
-          location = ad_context$selection[[1]]$range$start,
-          text = text_to_insert
-        )
+        if (is.null(ad_context)) {
+          shiny::showNotification(
+            ui = shiny::p("Something went wrong. Could not insert text. Make sure cursor is placed in a document."),
+            type = "error"
+          )
+        } else {
+          rstudioapi::insertText(
+            location = ad_context$selection[[1]]$range$start,
+            text = text_to_insert
+          )
+        }
+
+        session$sendCustomMessage("reset_input", "copy_to_file")
+        shiny::removeModal()
       }
     }) |>
       shiny::bindEvent(input$insert)
+
+    ## When close button is clicked, remove modal and
+    ## reset input values.
+    shiny::observe({
+      session$sendCustomMessage("reset_input", "freq_table")
+      shiny::removeModal()
+    }) |>
+      shiny::bindEvent(input$close_freq_table)
+
+    shiny::observe({
+      session$sendCustomMessage("reset_input", "copy_to_file")
+      shiny::removeModal()
+    }) |>
+      shiny::bindEvent(input$close_copy)
 
     ## When user clicks "Done", reset maxRequestSize
     shiny::observe({
@@ -342,5 +421,5 @@ wlsDataBrowser <- function() {
     })
   }
 
-  shiny::runGadget(ui, server)
+  shiny::shinyApp(ui, server)
 }
