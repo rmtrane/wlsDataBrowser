@@ -4,95 +4,13 @@ my_bs_theme <- function() {
   bslib::bs_theme(
     version = 5
   ) |>
-    bslib::bs_add_rules("
-    /* CSS */
-
-    /* Background color when hovering last column of wlsData */
-    #wlsData .rt-tbody .rt-tr .rt-td:nth-child(n+4):hover {
-      background-color: rgb(141, 204, 252) !important;
-    }
-
-    #wlsData .rt-td-inner {
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    /* Style title */
-    .custom-title {
-      display: flex;
-      align-items: center;
-      font-size: 24px;
-      font-weight: bold;
-      color:rgb(83, 90, 97);
-      text-align: center;
-      margin-top: 0.5rem;
-      margin-bottom: 0.5rem;
-      background-color: #f0f0f0; /* Grey background */
-      border-radius: 8px; /* Rounded corners */
-      padding: 18px; /* Padding for better appearance */
-    }
-
-    /* Adjust width of modal dialog */
-    .modal-dialog {
-      max-width: 80% !important; /* Adjust the percentage as needed */
-    }
-
-    /* No wrap */
-    .nowrap {
-      white-space: nowrap;
-    }
-
-    /* Spinner... */
-    .loader {
-      border: 16px solid #f3f3f3;
-      border-radius: 50%;
-      border-top: 16px solid #3498db;
-      width: 120px;
-      height: 120px;
-      animation: spin 2s linear infinite;
-      position: fixed;
-      top: 40%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      display: none;
-      z-index: 9999;
-    }
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
-
-    .blur-background {
-      filter: blur(5px);
-    }
-
-    /* Tooltip... */
-    .tooltip {
-      position: relative;
-      display: inline-block;
-      cursor: pointer;
-    }
-
-    .tooltip::after {
-        content: attr(data-tooltip);
-        position: absolute;
-        bottom: 100%;
-        left: 50%;
-        transform: translateX(-50%);
-        background-color: #333;
-        color: #fff;
-        padding: 5px;
-        border-radius: 5px;
-        white-space: nowrap;
-        opacity: 0;
-        visibility: hidden;
-        transition: opacity 0.3s;
-    }
-
-    .tooltip:hover::after {
-        opacity: 1;
-        visibility: visible;
-    }
-")
+    bslib::bs_add_rules(
+      rules =
+        paste0(
+          readLines(
+            ifelse(file.exists("inst/www/stylesheet.css"), "inst/www/stylesheet.css", "www/stylesheet.css")
+          ),
+          collapse = "\n"
+        )
+    )
 }

@@ -1,4 +1,4 @@
 Name: WLS Data Browser
 Description: Browse WLS Data
-Binding: wlsDataBrowser
+Binding: wlsDataBrowserApp
 Interactive: true
