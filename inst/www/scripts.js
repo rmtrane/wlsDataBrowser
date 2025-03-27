@@ -50,12 +50,7 @@ Shiny.addCustomMessageHandler('showSpinner', (value) => {
   }
 });
 
-// Set input value to NULL
-Shiny.addCustomMessageHandler('reset_input', (value) => {
-  Shiny.setInputValue(value, null);
-});
-
-// Set input.data_path_missing to true
-Shiny.addCustomMessageHandler('set_data_path_missing', (value) => {
-  Shiny.setInputValue('data_path_missing', value);
+// Set input value
+Shiny.addCustomMessageHandler('set_input_value', (message) => {
+  Shiny.setInputValue(message.var, message.val);
 });

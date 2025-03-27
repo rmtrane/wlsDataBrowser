@@ -1,12 +1,19 @@
+#' UI Part of Shiny App
+#'
 wlsDataBrowserUI <- bslib::page_fluid(
-  ## Add JS functions to html HEAD
+  ## Add a few things to HTML
   shiny::tags$head(
+    ## JS functions
     shiny::tags$script(
       src = "www/scripts.js",
+    ),
+    ##  CSS stylesheet
+    shiny::tags$link(
+      rel = "stylesheet", type = "text/css", href = "www/stylesheet.css"
     )
   ),
-  ## Add theme
-  theme = my_bs_theme(),
+  ## Fix bootstrap theme to version 5
+  theme = bslib::bs_theme(version = 5),
   ## Add spinner to be shown/hidden
   shiny::tags$div(id = "spinner", class = "loader"),
   ## Add title

@@ -1,21 +1,20 @@
+#' Server Part of Shiny App
+#'
 wlsDataBrowserServer <- function(input, output, session) {
+  ## Change max request size to make sure file can be uploaded.
+  ## First, save default so we can revert when app closes.
   old_shiny.maxRequestSize <- getOption("shiny.maxRequestSize")
-
   options(shiny.maxRequestSize = 1100 * 1024^2)
-
-  # message(getOption("wlsDataBrowser.data_path"))
 
   ## Reactive values
   wls_data_path <- shiny::reactiveVal(getOption("wlsDataBrowser.data_path"))
   freq_table <- shiny::reactiveVal()
   var_clicked <- shiny::reactiveVal()
 
-  ## Set input.data_path_missing to TRUE if option for data_path not set
+  ## Set input.data_path_missing to TRUE if option for data_path not set.
+  ## This will trigger the file input UI to show.
   observe({
-    session$sendCustomMessage(
-      "set_data_path_missing",
-      is.null(wls_data_path())
-    )
+    session$sendCustomMessage("set_input_value", message = list(var = "data_path_missing", val = is.null(wls_data_path())))
   })
 
   ## Binary to indicate if rstudioapi is available
@@ -147,9 +146,8 @@ wlsDataBrowserServer <- function(input, output, session) {
       }
     })
 
+  ## Show frequency table
   shiny::observe({
-    ## If triggered
-    # if (!is.null(input$freq_table)) {
     session$sendCustomMessage("showSpinner", TRUE)
 
     cur_var <- wls_data_tabl()$var_name[
@@ -173,15 +171,17 @@ wlsDataBrowserServer <- function(input, output, session) {
         easyClose = F
       )
     )
-    # }
   }) |>
     shiny::bindEvent(input$freq_table)
 
+  ## Show UI to copy to active file.
   shiny::observe({
     shiny::showModal(
       shiny::modalDialog(
         shiny::p("Write new variable name to use for variable in the text input box below. If left blank, no new name will be prepended."),
-        shiny::textInput("new_col_name", "New variable name"),
+        shiny::textInput("new_col_name", "New variable name", value = wls_data_tabl()$var_name[
+          as.numeric(input$copy_to_file) + 1
+        ]),
         footer = bslib::layout_columns(
           shiny::actionButton("close_copy", "Cancel"),
           shiny::actionButton("insert", "Insert Text"),
@@ -192,6 +192,7 @@ wlsDataBrowserServer <- function(input, output, session) {
   }) |>
     shiny::bindEvent(input$copy_to_file)
 
+  ## Actually copy to active file
   shiny::observe({
     if (rstudioapi_available) {
       ad_context <- rstudioapi::getActiveDocumentContext()
@@ -201,7 +202,9 @@ wlsDataBrowserServer <- function(input, output, session) {
       ]
 
       if (input$new_col_name == "") {
-        text_to_insert <- cur_var
+        text_to_insert <- paste0(
+          "\"", cur_var, "\" = \"", cur_var, "\""
+        )
       } else {
         text_to_insert <- paste0(
           "\"", input$new_col_name, "\" = \"", cur_var, "\""
@@ -220,7 +223,8 @@ wlsDataBrowserServer <- function(input, output, session) {
         )
       }
 
-      session$sendCustomMessage("reset_input", "copy_to_file")
+      session$sendCustomMessage("set_input_value", message = list(var = "copy_to_file", val = NULL))
+
       shiny::removeModal()
     }
   }) |>
@@ -229,13 +233,13 @@ wlsDataBrowserServer <- function(input, output, session) {
   ## When close button is clicked, remove modal and
   ## reset input values.
   shiny::observe({
-    session$sendCustomMessage("reset_input", "freq_table")
+    session$sendCustomMessage("set_input_value", message = list(var = "freq_table", val = NULL))
     shiny::removeModal()
   }) |>
     shiny::bindEvent(input$close_freq_table)
 
   shiny::observe({
-    session$sendCustomMessage("reset_input", "copy_to_file")
+    session$sendCustomMessage("set_input_value", message = list(var = "copy_to_file", val = NULL))
     shiny::removeModal()
   }) |>
     shiny::bindEvent(input$close_copy)
