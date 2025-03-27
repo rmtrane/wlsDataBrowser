@@ -95,9 +95,9 @@ table_values <- function(
       )
     )[colnames(for_out)], # Only keep colDefs for columns in for_out
     showPageSizeOptions = T,
-    defaultPageSize = 25,
+    defaultPageSize = 10,
     pageSizeOptions = c(10, 25, 50),
-    bordered = T
+    bordered = F
   )
 }
 

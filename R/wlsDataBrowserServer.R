@@ -51,7 +51,7 @@ wlsDataBrowserServer <- function(input, output, session) {
 
       ## Remove visit (Round) from labels
       out$labels <- gsub(
-        pattern = paste(levels(out$visit), collapse = " - |"),
+        pattern = paste0(levels(out$visit), " - ", collapse = "|"),
         replacement = "",
         x = out$labels
       )
@@ -65,65 +65,7 @@ wlsDataBrowserServer <- function(input, output, session) {
   output$wlsData <- # DT::renderDataTable({
     reactable::renderReactable({
       if (!is.null(wls_data_tabl())) {
-        # session$sendCustomMessage("showSpinner", TRUE)
-
-        reactable_tbl <- reactable::reactable(
-          ## Add extra columns to hold table and copy/paste icons.
-          ## These will function as triggers for displaying frequency
-          ## and copy variable to file
-          cbind(
-            wls_data_tabl()[, c("var_name", "visit", "labels")],
-            "freq_table" = rep(
-              ## Icon to show
-              as.character(shiny::icon("th-list", lib = "glyphicon")),
-              nrow(wls_data_tabl())
-            ),
-            "copy_to_file" = rep(
-              ## Icon to show
-              as.character(shiny::icon("copy", lib = "glyphicon")),
-              nrow(wls_data_tabl())
-            )
-          ),
-          columns = list(
-            var_name = reactable::colDef(
-              name = "Variable Name (as in data file)",
-              maxWidth = 280
-            ),
-            visit = reactable::colDef(
-              name = "Round",
-              width = 90
-            ),
-            labels = reactable::colDef(
-              name = "Variable Label (from data file)"
-            ),
-            freq_table = reactable::colDef(
-              name = "",
-              html = T,
-              width = 35,
-              align = "center",
-              vAlign = "center",
-              filterable = F,
-              style = "cursor: pointer;",
-              class = "freq-tables"
-            ),
-            copy_to_file = reactable::colDef(
-              name = "",
-              html = TRUE,
-              width = 35,
-              filterable = F,
-              show = rstudioapi_available,
-              align = "center",
-              vAlign = "center",
-              style = "cursor: pointer;",
-              class = "copy-var"
-            )
-          ),
-          onClick = reactable::JS("(rowInfo, colInfo) => { Shiny.setInputValue(colInfo.id, rowInfo.id); }"),
-          searchable = TRUE,
-          filterable = TRUE,
-          highlight = TRUE,
-          showPageSizeOptions = TRUE
-        )
+        reactable_tbl <- wls_variables_table(wls_data_tabl(), rstudioapi_available)
 
         ## Add JS to register onStateChange. Equivalent to htmlwidgets::onRender(),
         ## but aiming at reducing dependencies
@@ -160,9 +102,10 @@ wlsDataBrowserServer <- function(input, output, session) {
     shiny::showModal(
       shiny::modalDialog(
         reactable::renderReactable(freq_tab),
-        title = shiny::HTML(paste0(cur_label, " (", cur_var, ")")),
+        title = shiny::markdown(paste0("**", cur_label, "** (", cur_var, ")")),
         footer = shiny::actionButton("close_freq_table", "Return"),
-        easyClose = F
+        easyClose = F,
+        size = "xl"
       )
     )
   }) |>
@@ -172,15 +115,20 @@ wlsDataBrowserServer <- function(input, output, session) {
   shiny::observe({
     shiny::showModal(
       shiny::modalDialog(
-        shiny::p("Write new variable name to use for variable in the text input box below. If left blank, no new name will be prepended."),
-        shiny::textInput("new_col_name", "New variable name", value = wls_data_tabl()$var_name[
-          as.numeric(input$copy_to_file) + 1
-        ]),
+        shiny::p(
+          "Write new variable name to use for variable in the text input box below. If left blank, no new name will be prepended."
+        ),
+        shiny::textInput(
+          "new_col_name",
+          "New variable name",
+          value = wls_data_tabl()$var_name[as.numeric(input$copy_to_file) + 1]
+        ),
         footer = bslib::layout_columns(
           shiny::actionButton("close_copy", "Cancel"),
           shiny::actionButton("insert", "Insert Text"),
-          col_widths = c(4, -4, 4)
-        )
+          col_widths = c(6, 6) # c(4, -4, 4)
+        ),
+        size = "m"
       )
     )
   }) |>

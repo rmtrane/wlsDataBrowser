@@ -27,9 +27,9 @@
 }
 
 /* Adjust width of modal dialog */
-.modal-dialog {
-  max-width: 80% !important; /* Adjust the percentage as needed */
-}
+.modal-xl {
+  max-width: 80% !important; 
+} 
 
 /* No wrap */
 .nowrap {
