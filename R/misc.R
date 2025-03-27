@@ -6,14 +6,16 @@
 table_values <- function(
     cur_col = "selsibtype",
     file = getOption("wlsDataBrowser.data_path")) {
-  x <- haven::read_dta(file, col_select = dplyr::all_of(cur_col))[[1]]
+  col_names <- names(haven::read_dta(file, n_max = 0))
+
+  x <- haven::read_dta(file, col_select = which(col_names == cur_col))[[cur_col]]
 
   value_labels <- attr(x, "labels")
   x <- haven::zap_labels(x)
 
   tbl <- table(x)
 
-  for_out <- dplyr::tibble(
+  for_out <- data.frame(
     values = if (is.character(x)) names(tbl) else as.numeric(names(tbl)),
     n = as.numeric(tbl)
   )
@@ -21,7 +23,7 @@ table_values <- function(
   if (!is.null(value_labels)) {
     for_out <- merge(
       for_out,
-      dplyr::tibble(
+      data.frame(
         values = unname(value_labels),
         label = names(value_labels)
       ),

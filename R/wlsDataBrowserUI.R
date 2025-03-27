@@ -14,8 +14,9 @@ wlsDataBrowserUI <- bslib::page_fluid(
   ),
   ## Fix bootstrap theme to version 5
   theme = bslib::bs_theme(version = 5),
-  ## Add spinner to be shown/hidden
+  ## Add spinner and overlay to be shown/hidden
   shiny::tags$div(id = "spinner", class = "loader"),
+  shiny::tags$div(id = "spinner_overlay", class = "loader_overlay"),
   ## Add title
   title = "WLS Data Browser",
   ## Actual UI

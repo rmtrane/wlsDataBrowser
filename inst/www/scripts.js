@@ -41,14 +41,28 @@ window.onresize = (event) => {
 
 // Show/hide spinner. Set value to true to show spinner, and false to hide spinner.
 Shiny.addCustomMessageHandler('showSpinner', (value) => {
+  if (false) {
   if (value) {
-    document.getElementById('content').classList.add('blur-background');
+    // document.getElementById('content').classList.add('blur-background');
+    document.getElementById('spinner_overlay').style.display = "block";
     document.getElementById('spinner').style.display = 'block';
   } else {
-    document.getElementById('content').classList.remove('blur-background');
+    // document.getElementById('content').classList.remove('blur-background');
+    document.getElementById('spinner_overlay').style.display = "none";
     document.getElementById('spinner').style.display = 'none';
   }
+}
 });
+
+$(document).on('shiny:busy', function(event) {
+  document.getElementById('spinner_overlay').style.display = "block";
+  document.getElementById('spinner').style.display = 'block';
+})
+
+$(document).on('shiny:idle', function(event) {
+  document.getElementById('spinner_overlay').style.display = "none";
+  document.getElementById('spinner').style.display = 'none';
+})
 
 // Set input value
 Shiny.addCustomMessageHandler('set_input_value', (message) => {

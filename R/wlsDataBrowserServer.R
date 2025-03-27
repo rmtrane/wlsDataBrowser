@@ -64,6 +64,8 @@ wlsDataBrowserServer <- function(input, output, session) {
   output$wlsData <- # DT::renderDataTable({
     reactable::renderReactable({
       if (!is.null(wls_data_tabl())) {
+        # session$sendCustomMessage("showSpinner", TRUE)
+
         reactable_tbl <- reactable::reactable(
           ## Add extra columns to hold table and copy/paste icons.
           ## These will function as triggers for displaying frequency
@@ -148,8 +150,6 @@ wlsDataBrowserServer <- function(input, output, session) {
 
   ## Show frequency table
   shiny::observe({
-    session$sendCustomMessage("showSpinner", TRUE)
-
     cur_var <- wls_data_tabl()$var_name[
       as.numeric(input$freq_table) + 1
     ]
@@ -160,13 +160,10 @@ wlsDataBrowserServer <- function(input, output, session) {
 
     freq_tab <- table_values(cur_var, file = wls_data_path())
 
-
-    session$sendCustomMessage("showSpinner", FALSE)
-
     shiny::showModal(
       shiny::modalDialog(
         reactable::renderReactable(freq_tab),
-        title = shiny::HTML(paste0(cur_var, ": ", cur_label)),
+        title = shiny::HTML(paste0(cur_label, " (", cur_var, ")")),
         footer = shiny::actionButton("close_freq_table", "Return"),
         easyClose = F
       )
