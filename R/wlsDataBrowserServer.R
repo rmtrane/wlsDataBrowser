@@ -1,5 +1,6 @@
 #' Server Part of Shiny App
 #'
+#' @keywords internal
 wlsDataBrowserServer <- function(input, output, session) {
   ## Change max request size to make sure file can be uploaded.
   ## First, save default so we can revert when app closes.
@@ -13,7 +14,7 @@ wlsDataBrowserServer <- function(input, output, session) {
 
   ## Set input.data_path_missing to TRUE if option for data_path not set.
   ## This will trigger the file input UI to show.
-  observe({
+  shiny::observe({
     session$sendCustomMessage("set_input_value", message = list(var = "data_path_missing", val = is.null(wls_data_path())))
   })
 
@@ -117,11 +118,7 @@ wlsDataBrowserServer <- function(input, output, session) {
               class = "copy-var"
             )
           ),
-          onClick = reactable::JS("function(rowInfo, colInfo) {
-            if (colInfo.id == 'freq_table' || colInfo.id == 'copy_to_file') {
-              Shiny.setInputValue(colInfo.id, rowInfo.id);
-            };
-          }"),
+          onClick = reactable::JS("(rowInfo, colInfo) => { Shiny.setInputValue(colInfo.id, rowInfo.id); }"),
           searchable = TRUE,
           filterable = TRUE,
           highlight = TRUE,

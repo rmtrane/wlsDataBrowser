@@ -27,5 +27,6 @@ bar_style(
 \item{color}{string; color to use for text}
 }
 \description{
-Create bars for percentages
+From the reactable documentation.
 }
+\keyword{internal}

@@ -1,5 +1,6 @@
 #' UI Part of Shiny App
 #'
+#' @keywords internal
 wlsDataBrowserUI <- bslib::page_fluid(
   ## Add a few things to HTML
   shiny::tags$head(

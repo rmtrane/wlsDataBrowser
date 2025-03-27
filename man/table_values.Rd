@@ -17,3 +17,4 @@ table_values(
 \description{
 Frequency Table using reactable
 }
+\keyword{internal}

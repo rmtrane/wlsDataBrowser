@@ -3,6 +3,7 @@
 #' @param cur_col string; name of column to create frequency table from
 #' @param file string; path to file
 #'
+#' @keywords internal
 table_values <- function(
     cur_col = "selsibtype",
     file = getOption("wlsDataBrowser.data_path")) {
@@ -102,6 +103,8 @@ table_values <- function(
 
 #' Create bars for percentages
 #'
+#' From the reactable documentation.
+#'
 #' @param width scalar; width of bar as proportion of cell
 #' @param fill string; hex color to use for bar
 #' @param height string; height of bar
@@ -109,6 +112,7 @@ table_values <- function(
 #' @param backgroundPosition string; adjust position of bar
 #' @param color string; color to use for text
 #'
+#' @keywords internal
 bar_style <- function(
     width = 1,
     fill = "#D9D9D9",

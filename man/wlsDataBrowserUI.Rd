@@ -13,4 +13,4 @@ wlsDataBrowserUI
 \description{
 UI Part of Shiny App
 }
-\keyword{datasets}
+\keyword{internal}
