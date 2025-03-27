@@ -27,10 +27,16 @@ wlsDataBrowserServer <- function(input, output, session) {
   ) |>
     shiny::bindEvent(input$wls_data_path)
 
-  ## When wls_data_path() is ready, read metadata only, i.e. no rows!
+
+  ########################################
+  ########################################
+  ##
+  ## Get variables
+  ##
   wls_data_tabl <- shiny::reactive({
+    ## When wls_data_path() is ready...
     if (!is.null(wls_data_path())) {
-      ## Read .dta file
+      ## ... read metadata only, i.e. no rows!
       wls_data <- haven::read_dta(
         file = wls_data_path(),
         n_max = 0
@@ -61,17 +67,20 @@ wlsDataBrowserServer <- function(input, output, session) {
     }
   })
 
-  ## datatable to show
-  output$wlsData <- # DT::renderDataTable({
-    reactable::renderReactable({
-      if (!is.null(wls_data_tabl())) {
-        reactable_tbl <- wls_variables_table(wls_data_tabl(), rstudioapi_available)
+  ########################################
+  ########################################
+  ##
+  ## Create main table
+  ##
+  output$wlsData <- reactable::renderReactable({
+    if (!is.null(wls_data_tabl())) {
+      reactable_tbl <- wls_variables_table(wls_data_tabl(), rstudioapi_available)
 
-        ## Add JS to register onStateChange. Equivalent to htmlwidgets::onRender(),
-        ## but aiming at reducing dependencies
-        reactable_tbl$jsHooks[["render"]] <- c(
-          reactable_tbl$jsHooks[["render"]],
-          list(list(code = reactable::JS("() =>{
+      ## Add JS to register onStateChange. Equivalent to htmlwidgets::onRender(),
+      ## but aiming at reducing dependencies
+      reactable_tbl$jsHooks[["render"]] <- c(
+        reactable_tbl$jsHooks[["render"]],
+        list(list(code = reactable::JS("() =>{
               Reactable.onStateChange('wlsData', function(state) {
                 // Set the tooltips
                 setTooltips();
@@ -81,13 +90,17 @@ wlsDataBrowserServer <- function(input, output, session) {
                 $('#wlsData').find('.rt-td-inner[data-bs-original-title]').tooltip({container: 'body'});
               });
             }"), data = NULL))
-        )
+      )
 
-        reactable_tbl
-      }
-    })
+      reactable_tbl
+    }
+  })
 
-  ## Show frequency table
+  ########################################
+  ########################################
+  ##
+  ## Frequency table
+  ##
   shiny::observe({
     cur_var <- wls_data_tabl()$var_name[
       as.numeric(input$freq_table) + 1
@@ -111,7 +124,12 @@ wlsDataBrowserServer <- function(input, output, session) {
   }) |>
     shiny::bindEvent(input$freq_table)
 
-  ## Show UI to copy to active file.
+  ########################################
+  ########################################
+  ##
+  ## Copy to active file
+  ##
+  ## UI
   shiny::observe({
     shiny::showModal(
       shiny::modalDialog(
@@ -134,7 +152,7 @@ wlsDataBrowserServer <- function(input, output, session) {
   }) |>
     shiny::bindEvent(input$copy_to_file)
 
-  ## Actually copy to active file
+  ## Action
   shiny::observe({
     if (rstudioapi_available) {
       ad_context <- rstudioapi::getActiveDocumentContext()
@@ -172,6 +190,7 @@ wlsDataBrowserServer <- function(input, output, session) {
   }) |>
     shiny::bindEvent(input$insert)
 
+
   ## When close button is clicked, remove modal and
   ## reset input values.
   shiny::observe({
@@ -186,7 +205,11 @@ wlsDataBrowserServer <- function(input, output, session) {
   }) |>
     shiny::bindEvent(input$close_copy)
 
-  ## When user clicks "Done", reset maxRequestSize
+  ########################################
+  ########################################
+  ##
+  ## Done/close
+  ##
   shiny::observe({
     shiny::stopApp()
     options(shiny.maxRequestSize = old_shiny.maxRequestSize)
