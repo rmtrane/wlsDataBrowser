@@ -30,7 +30,7 @@ remotes::install_github("rmtrane/wlsDataBrowser")
 You can run the Shiny application interactively using the following:
 
 ``` r
-wlsDataBrowser::wlsDataBrowser()
+wlsDataBrowser::wlsDataBrowserApp()
 ```
 
 You can optionally set the file path so you don’t manually have to
@@ -42,6 +42,14 @@ options(wlsDataBrowser.data_path = "/path/to/wls/data.dta")
 ```
 
 You will need to restart your R session for the changes to take effect.
+
+The app shows a table of all the variables in the data. The table
+includes three columns:
+
+- the variable name as it appears in the data file
+- the round the variable relates to. This is infered from the variable
+  label
+- the variable label extracted from the label
 
 ## RStudio add-in
 
