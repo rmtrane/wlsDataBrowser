@@ -137,3 +137,33 @@ bar_style <- function(
     color = color
   )
 }
+
+#' New Script for Loading Data
+#'
+#' @keywords internal
+
+load_data_script <- function() {
+  if (!requireNamespace("rstudioapi", quietly = T)) {
+    stop("The rstudioapi package must be installed.")
+  }
+
+  data_path <- getOption("wlsDataBrowser.data_path")
+
+  if (is.null(data_path)) data_path <- "/path/to/data/file.dta"
+
+  rstudioapi::documentNew(text = paste0("library(dplyr)
+library(haven)
+
+vars <- c(
+  # Add variables here as \"new_name\" = \"original_name\".
+  # Example:
+  \"grad_or_sib\" = \"rtype\"
+)
+
+wls_data <- haven::read_dta(
+  file = \"", data_path, "\",
+  col_select = all_of(vars)
+) |>
+  select(!!!vars)
+  "))
+}

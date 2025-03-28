@@ -45,9 +45,12 @@ The app shows a table of all the variables in the data. The table includes three
 * the round the variable relates to. This is infered from the variable label
 * the variable label extracted from the label
 
-## RStudio add-in
+## RStudio add-ins
 
-Once installed, you should be able to find the `wlsDataBrowser` in the RStudio add-in dropdown menu. You might have to restart RStudio for the add-in to show up.
+Once installed, you should be able to find two add-ins in RStudio: 
+
+* `WLS Data Script Sketch` runs the function `load_data_script()` which creates a new file prefilled with a sketch for loading the WLS data. If the option `wlsDataBrowser.data_path` is set, this is used for the file argument in `haven::read_dta` call. If not, the file argument would have to be filled in manually. 
+* `WLS Data Browser` runs the Shiny application, which allows one to browse the data. 
 
 ## Positron keyboard shortcut
 
