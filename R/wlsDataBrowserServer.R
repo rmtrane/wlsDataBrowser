@@ -77,7 +77,7 @@ wlsDataBrowserServer <- function(input, output, session) {
       reactable_tbl <- wls_variables_table(wls_data_tabl(), rstudioapi_available)
 
       ## Add JS to register onStateChange. Equivalent to htmlwidgets::onRender(),
-      ## but aiming at reducing dependencies
+      ## but trying to avoid the extra dependecy
       reactable_tbl$jsHooks[["render"]] <- c(
         reactable_tbl$jsHooks[["render"]],
         list(list(code = reactable::JS("() =>{
@@ -87,7 +87,8 @@ wlsDataBrowserServer <- function(input, output, session) {
                 setInstructiveTooltips();
 
                 // Initiate tooltips
-                $('#wlsData').find('.rt-td-inner[data-bs-original-title]').tooltip({container: 'body'});
+                $('#wlsData').find('[data-bs-original-title]').tooltip({container: 'body'});
+
               });
             }"), data = NULL))
       )
